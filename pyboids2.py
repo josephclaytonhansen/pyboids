@@ -39,8 +39,8 @@ class GlobalParameters: #seed, count
         self.seed = seed
         self.count = count
         self.sim_start = 0
-        self.sim_end = 500
-        self.current_frame = 0
+        self.sim_end = 250
+        self.baked = True
         self.seed = 10
 
 class Critter: #wrapper for Blender object with some additional information 
@@ -123,10 +123,21 @@ fillCollectionWithCritters("Cube", "Boids", g.count)
 def bakeFrameAndAdvance():
     try:
         #starting on g.sim_start,
+        bpy.data.scenes["Scene"].frame_current = g.sim_start
+        while bpy.data.scenes["Scene"].frame_current <= g.sim_end:
+            if not g.baked:
+                #only calculate if it isn't baked, otherwise give realtime playback
+                #that is to say, ALL calculations go here
+                
+                #we do still need playback during editing (pre-baking)- worry about this later
+                
+                separation()
+                
+            bpy.data.scenes["Scene"].frame_current += 1
+            
+            #currently this gives the end result, still needs to bake each frame
+            
         #calculate...
-        # separation() Uncomment!
-
-        bpy.app.timers.register(separation) #debug!
         #bake frame...
         #advance to next frame...
         #until g.sim_end
@@ -135,7 +146,6 @@ def bakeFrameAndAdvance():
         return e
 
 def separation():
-
     for critter in ClassyCritters:
         if critter.lneighbors > 0:
             for boid in critter.neighbors:
@@ -150,6 +160,5 @@ def separation():
         critter.get_neighbors(ClassyCritters)
 
 
-    return 0.2 #debug!
 
 bakeFrameAndAdvance()
