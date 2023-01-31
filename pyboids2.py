@@ -17,7 +17,7 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 1.3
+        self.personal_space = 1.3n
         self.perception_length = 1.4 #this should always be bigger than personal space
         self.neighbors = []
         self.lneighbors = 0
