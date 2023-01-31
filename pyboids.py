@@ -7,6 +7,9 @@ class GlobalParameters: #seed, count
     def __init__(self, seed, count):
         self.seed = seed
         self.count = count
+        self.sim_start = 0
+        self.sim_end = 500
+        self.current_frame = 0
 
 class Critter: #wrapper for Blender object with some additional information 
     def __init__(self, name, obj):
@@ -14,13 +17,14 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 1.0
-        self.perception_length = 1.6 #seems like this should be slightly over 150% of person
+        self.personal_space = 1.3
+        self.perception_length = 1.4 #this should always be bigger than personal space
         self.neighbors = []
+        self.lneighbors = 0
         self.initialized = False
     
     def __str__(self):
-        return "N Neighbors: " + str(len(self.neighbors))
+        return "N Neighbors: " + str((self.lneighbors))
     
     def get_neighbors(self, boids):
         neighbors = self.neighbors
@@ -30,19 +34,10 @@ class Critter: #wrapper for Blender object with some additional information
                 if dist < self.perception_length:
                     neighbors.append(b)
         self.neighbors = neighbors
-        return len(self.neighbors)
+        self.lneighbors = len(self.neighbors)
+        return self.lneighbors
 
 ClassyCritters = []
-
-def colorByNeighbors(ob): #debug, remove for production
-    s = len(ob.neighbors) / 20
-    b = len(ob.neighbors) / 1
-    if len(ob.neighbors) > 0:
-        r = 20 / len(ob.neighbors)
-    else:
-        r = 0 
-    ob.obj.color = (b*s,0,r,1)
-    print(ob.color)
 
 def vectorDistance(a: Vector, b: Vector) -> float: 
     return (b - a).length
@@ -89,28 +84,61 @@ def initialSpacing(count):
         for critter in ClassyCritters:
             p = critter.personal_space + c
             # I don't have any hard math behind this, but it gives good looking results in testing
-            critter.obj.location[0] = ((p*2)*random.random()) - p
-            critter.obj.location[1] = ((p*2)*random.random()) - p
-            critter.obj.location[2] = ((p*2)*random.random()) - p
+            r1, r2, r3 = random.random(), random.random(), random.random()
+            critter.obj.location[0] = ((p*2)*r1) - p
+            critter.obj.location[1] = ((p*2)*r2) - p
+            critter.obj.location[2] = ((p*2)*r3) - p
+            critter.velocity = Vector([r3, r2, r1]).normalized()
+            print(critter.velocity)
         return True
-
-
+    
 def finalizeInitialSpacing():
     
     total_checks = 0 #this is a pure debug value, it should be removed for production
     
     for critter in ClassyCritters:
         total_checks += critter.get_neighbors(ClassyCritters)
-        
-        #remove everything below this
-        colorByNeighbors(critter)
-        print(critter)
-    print(total_checks)
-    #remove everything above this
+
  
-g = GlobalParameters(11, 300) #the same seed will return the same results! 
+g = GlobalParameters(11, 500) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
 
 fillCollectionWithCritters("Cube", "Boids", g.count)
 #this is reasonably fast for 0 < count < 1000, 
 #it can take several seconds to initialize at count > 1000 . Probably can be optimized
+
+#-------------------------------------Simulation---------------------------------------
+
+def bakeFrameAndAdvance():
+    try:
+        #starting on g.sim_start,
+        #calculate...
+        # separation() Uncomment!
+
+        bpy.app.timers.register(separation) #debug!
+        #bake frame...
+        #advance to next frame...
+        #until g.sim_end
+        return True
+    except Exception as e:
+        return e
+
+def separation():
+
+    for critter in ClassyCritters:
+        if critter.lneighbors > 0:
+            for boid in critter.neighbors:
+                d = vectorDistance(critter.obj.location, boid.obj.location)
+                if d < critter.personal_space:
+                    critter.velocity -= critter.obj.location - boid.obj.location
+                    critter.velocity = critter.velocity.normalized()
+                    t = critter.obj.location.copy() #debug! remove!
+                    critter.obj.location += critter.velocity #debug! Remove!
+                    print(critter.obj.location - t) #debug! remove!
+                    
+        critter.get_neighbors(ClassyCritters)
+
+
+    return 0.2 #debug!
+
+bakeFrameAndAdvance()
