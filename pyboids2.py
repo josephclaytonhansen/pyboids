@@ -1,6 +1,37 @@
 import bpy, random
+from datetime import datetime
 from mathutils import Vector
 C = bpy.context
+
+#----------------Generic helper functions-----------------
+
+def vectorDistance(a: Vector, b: Vector) -> float: 
+    return (b - a).length
+      
+def selectAndActive(n):
+    #utility function- there may be a one-liner that can replace this
+    obj = bpy.data.objects[n]
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
+def moveToCollection(target, n): #this isn't working, for some reason I haven't bug checked yet
+    collection = C.blend_data.collections.new(name=target)
+    C.collection.children.link(collection)
+    selectAndActive(n)
+    objs = C.selected_objects
+    coll_target = C.scene.collection.children.get(target)
+    if coll_target and objs:
+        for ob in objs:
+            for coll in ob.users_collection:
+                coll.objects.unlink(ob)
+            coll_target.objects.link(ob)
+
+def randomSeed():
+    seed = int(datetime.now().day * datetime.now().second * random.random())
+    return seed
+
+
+#-------------------Boid classes--------------------------
 
 class GlobalParameters: #seed, count
     #eventually this would have a UI
@@ -10,6 +41,7 @@ class GlobalParameters: #seed, count
         self.sim_start = 0
         self.sim_end = 500
         self.current_frame = 0
+        self.seed = 10
 
 class Critter: #wrapper for Blender object with some additional information 
     def __init__(self, name, obj):
@@ -38,27 +70,6 @@ class Critter: #wrapper for Blender object with some additional information
         return self.lneighbors
 
 ClassyCritters = []
-
-def vectorDistance(a: Vector, b: Vector) -> float: 
-    return (b - a).length
-      
-def selectAndActive(n):
-    #utility function- there may be a one-liner that can replace this
-    obj = bpy.data.objects[n]
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-
-def moveToCollection(target, n): #this isn't working, for some reason I haven't bug checked yet
-    collection = C.blend_data.collections.new(name=target)
-    C.collection.children.link(collection)
-    selectAndActive(n)
-    objs = C.selected_objects
-    coll_target = C.scene.collection.children.get(target)
-    if coll_target and objs:
-        for ob in objs:
-            for coll in ob.users_collection:
-                coll.objects.unlink(ob)
-            coll_target.objects.link(ob)
 
 def fillCollectionWithCritters(critter, col, count):
     random.seed(g.seed) 
@@ -100,7 +111,7 @@ def finalizeInitialSpacing():
         total_checks += critter.get_neighbors(ClassyCritters)
 
  
-g = GlobalParameters(11, 500) #the same seed will return the same results! 
+g = GlobalParameters(randomSeed(), 300) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
 
 fillCollectionWithCritters("Cube", "Boids", g.count)
