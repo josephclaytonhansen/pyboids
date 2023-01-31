@@ -12,9 +12,10 @@ class Critter: #wrapper for Blender object with some additional information
     def __init__(self, name, obj):
         self.name = name
         self.obj = obj
+        self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
         self.personal_space = 1.0
-        self.perception_length = 2.0
+        self.perception_length = 1.6 #seems like this should be slightly over 150% of person
         self.neighbors = []
         self.initialized = False
     
@@ -29,11 +30,21 @@ class Critter: #wrapper for Blender object with some additional information
                 if dist < self.perception_length:
                     neighbors.append(b)
         self.neighbors = neighbors
+        return len(self.neighbors)
 
 ClassyCritters = []
 
+def colorByNeighbors(ob): #debug, remove for production
+    s = len(ob.neighbors) / 20
+    b = len(ob.neighbors) / 1
+    if len(ob.neighbors) > 0:
+        r = 20 / len(ob.neighbors)
+    else:
+        r = 0 
+    ob.obj.color = (b*s,0,r,1)
+    print(ob.color)
+
 def vectorDistance(a: Vector, b: Vector) -> float: 
-    #going to need this later
     return (b - a).length
       
 def selectAndActive(n):
@@ -85,11 +96,19 @@ def initialSpacing(count):
 
 
 def finalizeInitialSpacing():
+    
+    total_checks = 0 #this is a pure debug value, it should be removed for production
+    
     for critter in ClassyCritters:
-        critter.get_neighbors(ClassyCritters)
+        total_checks += critter.get_neighbors(ClassyCritters)
+        
+        #remove everything below this
+        colorByNeighbors(critter)
         print(critter)
+    print(total_checks)
+    #remove everything above this
  
-g = GlobalParameters(10, 300) #the same seed will return the same results! 
+g = GlobalParameters(11, 300) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
 
 fillCollectionWithCritters("Cube", "Boids", g.count)
