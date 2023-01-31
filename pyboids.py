@@ -12,11 +12,23 @@ class Critter: #wrapper for Blender object with some additional information
     def __init__(self, name, obj):
         self.name = name
         self.obj = obj
-        self.velocity = None
+        self.velocity = Vector([0.0,0.0,0.0])
         self.personal_space = 1.0
-        self.perception_length = 5
+        self.perception_length = 2.0
         self.neighbors = []
         self.initialized = False
+    
+    def __str__(self):
+        return "N Neighbors: " + str(len(self.neighbors))
+    
+    def get_neighbors(self, boids):
+        neighbors = self.neighbors
+        for b in boids:
+            if b != self:
+                dist = vectorDistance(self.obj.location, b.obj.location)
+                if dist < self.perception_length:
+                    neighbors.append(b)
+        self.neighbors = neighbors
 
 ClassyCritters = []
 
@@ -53,18 +65,29 @@ def fillCollectionWithCritters(critter, col, count):
     for x in range(0, count):
         bpy.ops.object.duplicate(linked=True)
         o = bpy.context.selected_objects[0]
-        ClassyCritters.append(Critter(o.name, o))
-
-    initialSpacing(count)
-
+        r = Critter(o.name, o)
+        ClassyCritters.append(r)
+        r.initialized = True
+        
+    if initialSpacing(count):
+        finalizeInitialSpacing()
+    
 def initialSpacing(count):
-    c = count / 100
+    if count > 0:
+        c = count / 100
+        for critter in ClassyCritters:
+            p = critter.personal_space + c
+            # I don't have any hard math behind this, but it gives good looking results in testing
+            critter.obj.location[0] = ((p*2)*random.random()) - p
+            critter.obj.location[1] = ((p*2)*random.random()) - p
+            critter.obj.location[2] = ((p*2)*random.random()) - p
+        return True
+
+
+def finalizeInitialSpacing():
     for critter in ClassyCritters:
-        p = critter.personal_space + c
-        # I don't have any hard math behind this, but it gives good looking results in testing
-        critter.obj.location[0] = ((p*2)*random.random()) - p
-        critter.obj.location[1] = ((p*2)*random.random()) - p
-        critter.obj.location[2] = ((p*2)*random.random()) - p
+        critter.get_neighbors(ClassyCritters)
+        print(critter)
  
 g = GlobalParameters(10, 300) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
