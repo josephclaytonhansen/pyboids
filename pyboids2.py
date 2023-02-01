@@ -36,7 +36,7 @@ def randomSeed():
 class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
-        self.debug = False
+        self.debug = True
         self.seed = seed
         self.count = count
         self.sim_start = 0
@@ -50,8 +50,8 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 1.35
-        self.perception_length = 1.55 #this should always be bigger than personal space
+        self.personal_space = 1.6
+        self.perception_length = 1.95 #this should always be bigger than personal space
         self.neighbors = []
         self.lneighbors = 0
         self.initialized = False
@@ -124,15 +124,7 @@ fillCollectionWithCritters("Cube", "Boids", g.count)
 
 #-------------------------------------Simulation---------------------------------------
 
-def syncWeights(critter, s, c, a, sw, cw, aw, mw):
-    t = sw+cw+aw+mw
-    if t != 100:
-        factor = 100/t
-        sw = sw * factor
-        cw = cw * factor
-        aw = aw * factor
-        mw = mw * factor
-        
+def syncWeights(critter, s, c, a, sw, cw, aw, mw):        
     working_velocity = critter.velocity.copy()
     maintain = mw * working_velocity 
     s = s * sw
@@ -155,8 +147,9 @@ def bakeFrameAndAdvance(scene):
                 "Separation: ", vs, "Cohesion: ",
                 vc, "Alignment: ", va)
                 
-            critter.velocity = syncWeights(critter, vs, vc, va, 20, 40, 30, 10)
-
+            critter.velocity = syncWeights(critter, vs, vc, va, 55, 15, 30, 0)
+            #for now...
+            critter.obj.location += critter.velocity
             
         #calculate...
         #bake frame...
