@@ -50,8 +50,8 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 1.6
-        self.perception_length = 1.95 #this should always be bigger than personal space
+        self.personal_space = 4
+        self.perception_length = 6 #this should always be bigger than personal space
         self.neighbors = []
         self.lneighbors = 0
         self.initialized = False
@@ -95,7 +95,7 @@ def initialSpacing(count):
     if count > 0:
         c = count / 100
         for critter in ClassyCritters:
-            p = critter.personal_space + c
+            p = (critter.personal_space/2) + c
             # I don't have any hard math behind this, but it gives good looking results in testing
             r1, r2, r3 = random.random(), random.random(), random.random()
             critter.obj.location[0] = ((p*2)*r1) - p
