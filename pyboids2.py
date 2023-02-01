@@ -50,7 +50,7 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 4
+        self.personal_space = 10
         self.perception_length = 6 #this should always be bigger than personal space
         self.neighbors = []
         self.lneighbors = 0
@@ -159,6 +159,7 @@ def bakeFrameAndAdvance(scene):
 
 
 def separation(critter):
+    critter.get_neighbors(ClassyCritters)
     temp_velocity = Vector([0,0,0])
     if critter.lneighbors > 0:
         for boid in critter.neighbors:
@@ -166,8 +167,6 @@ def separation(critter):
             if d < critter.personal_space:
                 direction = (boid.obj.location - critter.obj.location).normalized()
                 temp_velocity += (1.0 / d) * direction
-                    
-        critter.get_neighbors(ClassyCritters)
         return temp_velocity #.normalized()
 
 def cohesion(critter, group):
