@@ -36,13 +36,14 @@ def randomSeed():
 class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
-        self.debug = True
+        self.debug = False
         self.seed = seed
         self.count = count
         self.sim_start = 0
         self.sim_end = 250
         self.baked = False
         self.seed = 10
+        self.air_speed_variation = .2
 
 class Critter: #wrapper for Blender object with some additional information 
     def __init__(self, name, obj):
@@ -50,8 +51,9 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.personal_space = 10
-        self.perception_length = 6 #this should always be bigger than personal space
+        self.air_speed = 2
+        self.personal_space = 16
+        self.perception_length = 14
         self.neighbors = []
         self.lneighbors = 0
         self.initialized = False
@@ -85,6 +87,11 @@ def fillCollectionWithCritters(critter, col, count):
         bpy.ops.object.duplicate(linked=True)
         o = bpy.context.selected_objects[0]
         r = Critter(o.name, o)
+        k = random.random()
+        if k >= .5:
+            r.air_speed -= ((k / (1/g.air_speed_variation)))
+        else:
+            r.air_speed += ((k / (1/g.air_speed_variation)))
         ClassyCritters.append(r)
         r.initialized = True
         
@@ -93,9 +100,9 @@ def fillCollectionWithCritters(critter, col, count):
     
 def initialSpacing(count):
     if count > 0:
-        c = count / 100
+        c = count / 10
         for critter in ClassyCritters:
-            p = (critter.personal_space/2) + c
+            p = (1/critter.personal_space) + c
             # I don't have any hard math behind this, but it gives good looking results in testing
             r1, r2, r3 = random.random(), random.random(), random.random()
             critter.obj.location[0] = ((p*2)*r1) - p
@@ -147,9 +154,12 @@ def bakeFrameAndAdvance(scene):
                 "Separation: ", vs, "Cohesion: ",
                 vc, "Alignment: ", va)
                 
-            critter.velocity = syncWeights(critter, vs, vc, va, -0.01, 0.1, 0.1, 1.0)
+            critter.velocity = syncWeights(critter,
+             vs, vc, va,
+              -0.01, 0.1, 0.1, 0.5) * critter.air_speed
+
             #for now...
-            critter.obj.location += critter.velocity
+            critter.obj.location += critter.velocity           
             
         #calculate...
         #bake frame...
@@ -157,6 +167,8 @@ def bakeFrameAndAdvance(scene):
         #until g.sim_end
         return True
 
+
+#--------------------Basic Rules------------------------
 
 def separation(critter):
     critter.get_neighbors(ClassyCritters)
@@ -191,5 +203,11 @@ def alignment(critter, group):
     temp_velocity = temp_velocity / (len(ClassyCritters)/group)
     return temp_velocity # .normalized()
     
-        
+
+#-----------------------Advanced Rules------------------------
+
+    
+    
+    
+#--------------------Viewport Preview-------------------------
 bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
