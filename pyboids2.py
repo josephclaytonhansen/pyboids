@@ -192,7 +192,7 @@ def alignment(critter, group):
     for boid in range(i, len(ClassyCritters), group):
         temp_velocity = Vector([0,0,0])
         temp_velocity += ClassyCritters[boid].velocity
-    temp_velocity -= critter.obj.location
+    temp_velocity -= critter.velocity
     temp_velocity = temp_velocity / (len(ClassyCritters)/group)
     return temp_velocity.normalized()
     
