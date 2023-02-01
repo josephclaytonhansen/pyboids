@@ -36,6 +36,7 @@ def randomSeed():
 class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
+        self.debug = False
         self.seed = seed
         self.count = count
         self.sim_start = 0
@@ -101,7 +102,9 @@ def initialSpacing(count):
             critter.obj.location[1] = ((p*2)*r2) - p
             critter.obj.location[2] = ((p*2)*r3) - p
             critter.velocity = Vector([r3, r2, r1]).normalized()
-            print(critter.velocity)
+            
+            if g.debug:
+                print(critter.velocity)
         return True
     
 def finalizeInitialSpacing():
@@ -121,28 +124,45 @@ fillCollectionWithCritters("Cube", "Boids", g.count)
 
 #-------------------------------------Simulation---------------------------------------
 
-def bakeFrameAndAdvance(scene):
-
-    #starting on g.sim_start, 
-    
-    for critter in ClassyCritters:
-        vs = separation(critter)
-        vc = cohesion(critter, 3)
-        va = alignment(critter, 2)
-        print("Critter: ", critter,
-         "Frame: ", bpy.data.scenes["Scene"].frame_current,
-        "Separation: ", vs, "Cohesion: ",
-        vc, "Alignment: ", va)
-            
-    critter.velocity = critter.velocity.normalized()
-    bpy.data.scenes["Scene"].frame_current += 1
-
+def syncWeights(critter, s, c, a, sw, cw, aw, mw):
+    t = sw+cw+aw+mw
+    if t != 100:
+        factor = 100/t
+        sw = sw * factor
+        cw = cw * factor
+        aw = aw * factor
+        mw = mw * factor
         
-    #calculate...
-    #bake frame...
-    #advance to next frame...
-    #until g.sim_end
-    return True
+    working_velocity = critter.velocity.copy()
+    maintain = mw * working_velocity 
+    s = s * sw
+    c = c * cw
+    a = a * aw
+    working_velocity = maintain + s + c + a
+    return working_velocity.normalized()
+
+def bakeFrameAndAdvance(scene):
+    #starting on g.sim_start, 
+    if not g.baked:
+        for critter in ClassyCritters:
+            vs = separation(critter)
+            vc = cohesion(critter, 3)
+            va = alignment(critter, 2)
+            
+            if g.debug:
+                print("Critter: ", critter,
+                 "Frame: ", bpy.data.scenes["Scene"].frame_current,
+                "Separation: ", vs, "Cohesion: ",
+                vc, "Alignment: ", va)
+                
+            critter.velocity = syncWeights(critter, vs, vc, va, 20, 40, 30, 10)
+
+            
+        #calculate...
+        #bake frame...
+        #advance to next frame...
+        #until g.sim_end
+        return True
 
 
 def separation(critter):
