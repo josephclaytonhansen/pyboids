@@ -40,7 +40,7 @@ class GlobalParameters: #seed, count
         self.count = count
         self.sim_start = 0
         self.sim_end = 250
-        self.baked = True
+        self.baked = False
         self.seed = 10
 
 class Critter: #wrapper for Blender object with some additional information 
@@ -56,9 +56,10 @@ class Critter: #wrapper for Blender object with some additional information
         self.initialized = False
     
     def __str__(self):
-        return "N Neighbors: " + str((self.lneighbors))
+        return self.name+"  Neighbors: " + str((self.lneighbors))
     
     def get_neighbors(self, boids):
+        self.neighbors = []
         neighbors = self.neighbors
         for b in boids:
             if b != self:
@@ -111,7 +112,7 @@ def finalizeInitialSpacing():
         total_checks += critter.get_neighbors(ClassyCritters)
 
  
-g = GlobalParameters(randomSeed(), 300) #the same seed will return the same results! 
+g = GlobalParameters(randomSeed(), 100) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
 
 fillCollectionWithCritters("Cube", "Boids", g.count)
@@ -120,45 +121,60 @@ fillCollectionWithCritters("Cube", "Boids", g.count)
 
 #-------------------------------------Simulation---------------------------------------
 
-def bakeFrameAndAdvance():
-    try:
-        #starting on g.sim_start,
-        bpy.data.scenes["Scene"].frame_current = g.sim_start
-        while bpy.data.scenes["Scene"].frame_current <= g.sim_end:
-            if not g.baked:
-                #only calculate if it isn't baked, otherwise give realtime playback
-                #that is to say, ALL calculations go here
-                
-                #we do still need playback during editing (pre-baking)- worry about this later
-                
-                separation()
-                
-            bpy.data.scenes["Scene"].frame_current += 1
-            
-            #currently this gives the end result, still needs to bake each frame
-            
-        #calculate...
-        #bake frame...
-        #advance to next frame...
-        #until g.sim_end
-        return True
-    except Exception as e:
-        return e
+def bakeFrameAndAdvance(scene):
 
-def separation():
+    #starting on g.sim_start, 
+    
     for critter in ClassyCritters:
-        if critter.lneighbors > 0:
-            for boid in critter.neighbors:
-                d = vectorDistance(critter.obj.location, boid.obj.location)
-                if d < critter.personal_space:
-                    critter.velocity -= critter.obj.location - boid.obj.location
-                    critter.velocity = critter.velocity.normalized()
-                    t = critter.obj.location.copy() #debug! remove!
-                    critter.obj.location += critter.velocity #debug! Remove!
-                    print(critter.obj.location - t) #debug! remove!
+        vs = separation(critter)
+        vc = cohesion(critter, 3)
+        va = alignment(critter, 2)
+        print("Critter: ", critter,
+         "Frame: ", bpy.data.scenes["Scene"].frame_current,
+        "Separation: ", vs, "Cohesion: ",
+        vc, "Alignment: ", va)
+            
+    critter.velocity = critter.velocity.normalized()
+    bpy.data.scenes["Scene"].frame_current += 1
+
+        
+    #calculate...
+    #bake frame...
+    #advance to next frame...
+    #until g.sim_end
+    return True
+
+
+def separation(critter):
+    temp_velocity = Vector([0,0,0])
+    if critter.lneighbors > 0:
+        for boid in critter.neighbors:
+            d = vectorDistance(critter.obj.location, boid.obj.location)
+            if d < critter.personal_space:
+                temp_velocity -= critter.obj.location - boid.obj.location
                     
         critter.get_neighbors(ClassyCritters)
+        return temp_velocity.normalized()
 
+def cohesion(critter, group):
+    i = bpy.data.scenes["Scene"].frame_current % group == 0 
+    #there's no need for universal cohesion on every frame, this switches between groups
+    for boid in range(i, len(ClassyCritters), group):
+        temp_velocity = Vector([0,0,0])
+        temp_velocity += ClassyCritters[boid].obj.location
+    temp_velocity -= critter.obj.location
+    temp_velocity = temp_velocity / (len(ClassyCritters)/group)
+    return temp_velocity.normalized()
 
-
-bakeFrameAndAdvance()
+def alignment(critter, group):
+    i = bpy.data.scenes["Scene"].frame_current % group == 0 
+    #there's no need for universal alignment on every frame, this switches between groups
+    for boid in range(i, len(ClassyCritters), group):
+        temp_velocity = Vector([0,0,0])
+        temp_velocity += ClassyCritters[boid].velocity
+    temp_velocity -= critter.obj.location
+    temp_velocity = temp_velocity / (len(ClassyCritters)/group)
+    return temp_velocity.normalized()
+    
+        
+bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
