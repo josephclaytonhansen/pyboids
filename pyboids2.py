@@ -147,7 +147,7 @@ def bakeFrameAndAdvance(scene):
                 "Separation: ", vs, "Cohesion: ",
                 vc, "Alignment: ", va)
                 
-            critter.velocity = syncWeights(critter, vs, vc, va, 55, 15, 30, 0)
+            critter.velocity = syncWeights(critter, vs, vc, va, -0.01, 0.1, 0.1, 1.0)
             #for now...
             critter.obj.location += critter.velocity
             
@@ -164,20 +164,23 @@ def separation(critter):
         for boid in critter.neighbors:
             d = vectorDistance(critter.obj.location, boid.obj.location)
             if d < critter.personal_space:
-                temp_velocity -= critter.obj.location - boid.obj.location
+                direction = (boid.obj.location - critter.obj.location).normalized()
+                temp_velocity += (1.0 / d) * direction
                     
         critter.get_neighbors(ClassyCritters)
-        return temp_velocity.normalized()
+        return temp_velocity #.normalized()
 
 def cohesion(critter, group):
     i = bpy.data.scenes["Scene"].frame_current % group == 0 
     #there's no need for universal cohesion on every frame, this switches between groups
+    center_position = Vector([0,0,0])
+    count = 0
     for boid in range(i, len(ClassyCritters), group):
-        temp_velocity = Vector([0,0,0])
-        temp_velocity += ClassyCritters[boid].obj.location
-    temp_velocity -= critter.obj.location
-    temp_velocity = temp_velocity / (len(ClassyCritters)/group)
-    return temp_velocity.normalized()
+        center_position += ClassyCritters[boid].obj.location
+        count += 1
+    center_position /= count
+    temp_velocity = center_position - critter.obj.location
+    return temp_velocity #.normalized()
 
 def alignment(critter, group):
     i = bpy.data.scenes["Scene"].frame_current % group == 0 
@@ -187,7 +190,7 @@ def alignment(critter, group):
         temp_velocity += ClassyCritters[boid].velocity
     temp_velocity -= critter.velocity
     temp_velocity = temp_velocity / (len(ClassyCritters)/group)
-    return temp_velocity.normalized()
+    return temp_velocity # .normalized()
     
         
 bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
