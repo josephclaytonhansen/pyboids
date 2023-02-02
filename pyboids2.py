@@ -251,13 +251,13 @@ class BoidsPanel(bpy.types.Panel):
             row.operator("pyboids.init")
             row = layout.row()
             row.prop(scene, "boid_count")
-            row = layout.row()
+            row = layout.row(align=True)
             row.prop(scene, "pscale")
             row.prop(scene, "pscalesf")
         else:
             row.operator("pyboids.clear")
         layout.separator()
-        layout.label(text="Dynamic settings")
+        layout.label(text="Dynamic settings (keyframe-able)")
         row=layout.row()
         row.prop(scene, "underwater")
         row = layout.row()
@@ -266,8 +266,20 @@ class BoidsPanel(bpy.types.Panel):
         row.prop(scene, "bas")
         row.prop(scene, "asv")
         layout.separator()
+
+class BoidsLandingPanel(bpy.types.Panel):
+    bl_label = "PyBoids Landing"
+    bl_idname = "OBJECT_PT_pyboids_landing_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_parent_id = 'OBJECT_PT_pyboids_panel' 
+    bl_region_type = 'UI'
+    bl_context = "objectmode"
+    bl_category = "Animation"
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene 
         if not bpy.data.scenes["Scene"].underwater:
-            layout.label(text="Landing settings")
             layout.label(text="Recharge time:")
             row = layout.row(align=True)
             row.prop(scene, "min_rechargetime")
@@ -285,7 +297,30 @@ class BoidsPanel(bpy.types.Panel):
             sub.scale_x = 1.5
             sub.prop(scene, "hopsurface")
         
+class BoidsRulesPanel(bpy.types.Panel):
+    bl_label = "PyBoids Rules"
+    bl_idname = "OBJECT_PT_pyboids_rules_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_parent_id = 'OBJECT_PT_pyboids_panel' 
+    bl_region_type = 'UI'
+    bl_context = "objectmode"
+    bl_category = "Animation"
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene 
+        row = layout.row(align=True)
+        row.prop(scene, "goalb") 
+        row.prop(scene, "goal")
+        layout.separator()
         
+        row = layout.row(align=True)
+        row.prop(scene, "predatorsb") 
+        row.prop(scene, "predators")
+        row = layout.row(align=True)
+        row.prop(scene, "predatorscatter") 
+        row.prop(scene, "predatoracc")
+              
 
 #----------------------------Operators------------------------
 
@@ -354,6 +389,8 @@ bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
 def register():
     b = bpy.types.Scene
     bpy.utils.register_class(BoidsPanel)
+    bpy.utils.register_class(BoidsLandingPanel)
+    bpy.utils.register_class(BoidsRulesPanel)
     bpy.utils.register_class(CreateBoids)
     bpy.utils.register_class(ResetBoids)
     b.boid_count = IntProperty(name = "Boid count", default = 100)
@@ -384,14 +421,26 @@ def register():
     b.hopsurface = PointerProperty(name="Surface", type = bpy.types.Object,
     description="Set the surface for boids to hop around on")
     b.sticky = BoolProperty(name="Sticky crawling", 
-    description = "If True, boids will crawl and ignore gravity, like insects.\nIf false, boids will only land on and crawl on faces facing upwards, like birds.")
+    description = "If True, boids will crawl and ignore gravity, like insects.\nIf false, boids will only land on and crawl on faces facing upwards, like birds")
+    b.goal = PointerProperty(name="",
+    type = bpy.types.Object,
+    description = "Goal object to move towards in flight")
+    b.goalb = BoolProperty(name = "Enable goal", description="Goal object to move towards in flight.")
+    b.predators = PointerProperty(name="",
+    type = bpy.types.Collection,
+    description = "Predators to move away from in flight, and potentially split the flock.\nEffective distance is determined by perception distance")
+    b.predatorsb = BoolProperty(name = "Enable predators",
+    description = "Predators to move away from in flight, and potentially split the flock.\nEffective distance is determined by perception distance")
+    b.predatorscatter=BoolProperty(name="Scatter landed",
+    description = "If True, predators will force landed boids to take flight immediately if they are near enough")
+    b.predatoracc = BoolProperty(name="Air speed burst",
+    description = "If True, boids will have a burst of increased speed while a predator is within perception distance.\nThis will rapidly deplete their air time, and they will land sooner")
     
-    
-    
-
 
 def unregister():
     bpy.utils.unregister_class(BoidsPanel)
+    bpy.utils.unregister_class(BoidsLandingPanel)
+    bpy.utils.unregister_class(BoidsRulesPanel)
     bpy.utils.unregister_class(CreateBoids)
     bpy.utils.unregister_class(ResetBoids)
     for i in [b.boid_count, b.bas,
@@ -399,7 +448,9 @@ def unregister():
     b.pscalesf, b.underwater,
     b.min_rechargetime, b.max_rechargetime,
     b.min_airtime, b.max_airtime, b.sticky,
-    b.crawl, b.hopandfeed, b.hopsurface]:
+    b.crawl, b.hopandfeed, b.hopsurface,
+    b.goal, b.goalb, b.predators, b.predatorsb,
+    b.predatorscatter, b.preatoracc]:
         del i
 
 
