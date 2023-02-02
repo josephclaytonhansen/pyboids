@@ -250,6 +250,7 @@ class BoidsPanel(bpy.types.Panel):
             row.operator("pyboids.init")
             row = layout.row()
             row.prop(scene, "boid_count")
+            row.prop(scene, "bseed")
             row = layout.row(align=True)
             row.prop(scene, "pscale")
             row.prop(scene, "pscalesf")
@@ -342,6 +343,8 @@ class CreateBoids(bpy.types.Operator):
         
         
         ClassyCritters = []
+        
+        g.seed = bpy.data.scenes["Scene"].bseed
         g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
         g.air_speed = bpy.data.scenes["Scene"].bas / 10.0
         g.air_speed_variation = bpy.data.scenes["Scene"].asv
@@ -392,7 +395,7 @@ def register():
     bpy.utils.register_class(BoidsRulesPanel)
     bpy.utils.register_class(CreateBoids)
     bpy.utils.register_class(ResetBoids)
-    b.boid_count = IntProperty(name = "Boid count", default = 100)
+    b.boid_count = IntProperty(name = "Count", default = 100)
     b.bas = IntProperty(name = "Air speed", default = 8) #/10
     b.asv = FloatProperty(name = "Variation", description = "Air speed variation", default = .5)
     b.psm = IntProperty(name = "Personal space multiplier", default = 9) #/100
@@ -434,6 +437,7 @@ def register():
     description = "If True, predators will force landed boids to take flight immediately if they are near enough")
     b.predatoracc = BoolProperty(name="Air speed burst",
     description = "If True, boids will have a burst of increased speed while a predator is within perception distance.\nThis will rapidly deplete their air time, and they will land sooner")
+    b.bseed = IntProperty(name="Seed", default=g.seed)
     
 
 def unregister():
@@ -449,7 +453,7 @@ def unregister():
     b.min_airtime, b.max_airtime, b.sticky,
     b.crawl, b.hopandfeed, b.hopsurface,
     b.goal, b.goalb, b.predators, b.predatorsb,
-    b.predatorscatter, b.preatoracc]:
+    b.predatorscatter, b.preatoracc, b.bseed]:
         del i
 
 
