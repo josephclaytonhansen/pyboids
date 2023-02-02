@@ -38,12 +38,12 @@ class GlobalParameters: #seed, count
     def __init__(self, seed, count):
         self.debug = False
         self.seed = seed
-        self.count = count
+        self.count = count #expose this!
         self.sim_start = 0
         self.sim_end = 250
         self.baked = False
-        self.seed = 10
-        self.air_speed_variation = .2
+        self.air_speed_variation = .5 #expose this!
+        self.personal_space_multiplier = .09 #expose this!
 
 class Critter: #wrapper for Blender object with some additional information 
     def __init__(self, name, obj):
@@ -51,9 +51,9 @@ class Critter: #wrapper for Blender object with some additional information
         self.obj = obj
         self.color = obj.color #debug value, remove
         self.velocity = Vector([0.0,0.0,0.0])
-        self.air_speed = 2
-        self.personal_space = 16
-        self.perception_length = 14
+        self.air_speed = .8
+        self.personal_space = 56
+        self.perception_length = 54
         self.neighbors = []
         self.lneighbors = 0
         self.initialized = False
@@ -94,12 +94,14 @@ def fillCollectionWithCritters(critter, col, count):
             r.air_speed += ((k / (1/g.air_speed_variation)))
         ClassyCritters.append(r)
         r.initialized = True
+        r.personal_space = 1120 * g.personal_space_multiplier
+        r.perception_length = r.personal_space - 2
         
     if initialSpacing(count):
         finalizeInitialSpacing()
     
 def initialSpacing(count):
-    if count > 0:
+    if count > 0: 
         c = count / 10
         for critter in ClassyCritters:
             p = (1/critter.personal_space) + c
@@ -154,12 +156,12 @@ def bakeFrameAndAdvance(scene):
                 "Separation: ", vs, "Cohesion: ",
                 vc, "Alignment: ", va)
                 
-            critter.velocity = syncWeights(critter,
+            critter.velocity = (syncWeights(critter,
              vs, vc, va,
-              -0.01, 0.1, 0.1, 0.5) * critter.air_speed
+              -g.personal_space_multiplier, 0.1, 0.1, 0.5)).normalized()
 
             #for now...
-            critter.obj.location += critter.velocity           
+            critter.obj.location += critter.velocity * critter.air_speed         
             
         #calculate...
         #bake frame...
