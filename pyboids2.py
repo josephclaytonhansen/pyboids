@@ -63,6 +63,7 @@ class GlobalParameters: #seed, count
         self.sim_end = 250
         self.baked = False
         self.air_speed_variation = .5 #expose this!
+        self.air_speed = .8 #expose this!
         self.personal_space_multiplier = .09 #expose this!
 
 class Critter: #wrapper for Blender object with some additional information 
@@ -108,6 +109,7 @@ def fillCollectionWithCritters(critter, col, count):
         o = bpy.context.selected_objects[0]
         r = Critter(o.name, o)
         k = random.random()
+        r.air_speed = g.air_speed
         if k >= .5:
             r.air_speed -= ((k / (1/g.air_speed_variation)))
         else:
@@ -243,6 +245,12 @@ class BoidsPanel(bpy.types.Panel):
             row.operator("pyboids.init")
             row = layout.row()
             row.prop(scene, "boid_count")
+        row = layout.row()
+        row.prop(scene, "psm")
+        row = layout.row()
+        row.prop(scene, "bas")
+        row = layout.row()
+        row.prop(scene, "asv")
 
 #----------------------------Operators------------------------
 
@@ -256,6 +264,9 @@ class CreateBoids(bpy.types.Operator):
         return context.active_object is not None
 
     def execute(self, context):
+        g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
+        g.air_speed = bpy.data.scenes["Scene"].bas / 10.0
+        g.air_speed_variation = bpy.data.scenes["Scene"].asv
         g.count = bpy.data.scenes["Scene"].boid_count
         fillCollectionWithCritters("Cube", "Boids", g.count)
         #this is reasonably fast for 0 < count < 1000, 
@@ -265,7 +276,12 @@ class CreateBoids(bpy.types.Operator):
     
     
 #--------------------Viewport Preview-------------------------
-
+try:
+    g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
+    g.air_speed = bpy.data.scenes["Scene"].bas / 10.0
+    g.air_speed_variation = bpy.data.scenes["Scene"].asv
+except Exception as e:
+    print(e)
 bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
 
 #---------------------------Register--------------------------
@@ -273,13 +289,17 @@ bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
 def register():
     bpy.utils.register_class(BoidsPanel)
     bpy.utils.register_class(CreateBoids)
-    bpy.types.Scene.boid_count = IntProperty(name = "Boid Count", default = 100)
+    bpy.types.Scene.boid_count = IntProperty(name = "Boid count", default = 100)
+    bpy.types.Scene.bas = IntProperty(name = "Air speed", default = 8) #/10
+    bpy.types.Scene.asv = FloatProperty(name = "Air speed variation", default = .5)
+    bpy.types.Scene.psm = IntProperty(name = "Personal space multiplier", default = 9) #/100
 
 
 def unregister():
     bpy.utils.unregister_class(BoidsPanel)
     bpy.utils.unregister_class(CreateBoids)
-    for i in [bpy.types.Scene.boid_count]:
+    for i in [bpy.types.Scene.boid_count, bpy.types.Scene.bas,
+    bpy.types.Scene.asv, bpy.types.Scene.psm]:
         del i
 
 
