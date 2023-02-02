@@ -261,6 +261,12 @@ class CreateBoids(bpy.types.Operator):
     def execute(self, context):
         bpy.context.collection.children.link(bpy.data.collections.new("PyBoids"))
         
+        g.saved_initiator = bpy.context.selected_objects[0]
+        g.saved_initiator_location = bpy.context.selected_objects[0].location.copy()
+        #currently this only allows for 1 selected object to be a boid object
+        #eventually this needs to be changed to be a list of saved locations
+        
+        
         ClassyCritters = []
         g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
         g.air_speed = bpy.data.scenes["Scene"].bas / 10.0
@@ -287,6 +293,10 @@ class ResetBoids(bpy.types.Operator):
         bpy.data.collections.remove(bpy.data.collections['PyBoids'])
         g.started = False
         g.baked = False
+        
+        g.saved_initiator.location = g.saved_initiator_location
+        g.saved_initiator.select_set(True)
+        
         return {'FINISHED'}
     
     
