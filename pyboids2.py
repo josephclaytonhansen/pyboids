@@ -117,7 +117,6 @@ def fillCollectionWithCritters(critter, col, count):
         r.perception_length = r.personal_space - 2
         j = r.air_speed / ((1/bpy.data.scenes["Scene"].pscalesf) * 100)
         
-        self.recharge_time = int(k*20)+20
         
         if bpy.data.scenes["Scene"].pscale == True:
             for d in [0,1,2]:
