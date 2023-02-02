@@ -165,6 +165,7 @@ def syncWeights(critter, s, c, a, sw, cw, aw, mw):
 
 def bakeFrameAndAdvance(scene):
     g.underwater = bpy.data.scenes["Scene"].underwater
+    g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
     #starting on g.sim_start, 
     if not g.baked and g.started:
         for critter in ClassyCritters:
