@@ -33,17 +33,6 @@ def selectAndActive(n):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
-def moveToCollection(target, n): #this isn't working, for some reason I haven't bug checked yet
-    collection = C.blend_data.collections.new(name=target)
-    C.collection.children.link(collection)
-    selectAndActive(n)
-    objs = C.selected_objects
-    coll_target = C.scene.collection.children.get(target)
-    if coll_target and objs:
-        for ob in objs:
-            for coll in ob.users_collection:
-                coll.objects.unlink(ob)
-            coll_target.objects.link(ob)
 
 def randomSeed():
     seed = int(datetime.now().day * datetime.now().second * random.random())
@@ -102,11 +91,16 @@ def fillCollectionWithCritters(critter, col, count):
     selectAndActive(critter)
     o = bpy.context.selected_objects[0]
     ClassyCritters.append(Critter(o.name, o))
-    moveToCollection(col, critter)
+    #moveToCollection(col, critter)
     
     for x in range(0, count):
         bpy.ops.object.duplicate(linked=True)
         o = bpy.context.selected_objects[0]
+        try:
+            bpy.data.collections["PyBoids"].objects.link(o)
+            bpy.data.collections["Collections"].objects.unlink(o)
+        except Exception as e:
+            print(e)
         r = Critter(o.name, o)
         k = random.random()
         r.air_speed = g.air_speed
@@ -245,12 +239,17 @@ class BoidsPanel(bpy.types.Panel):
             row.operator("pyboids.init")
             row = layout.row()
             row.prop(scene, "boid_count")
+            row = layout.row()
+            row.prop(scene, "pscale")
+        else:
+            row.operator("pyboids.clear")
         row = layout.row()
         row.prop(scene, "psm")
         row = layout.row()
         row.prop(scene, "bas")
         row = layout.row()
         row.prop(scene, "asv")
+        
 
 #----------------------------Operators------------------------
 
@@ -264,14 +263,34 @@ class CreateBoids(bpy.types.Operator):
         return context.active_object is not None
 
     def execute(self, context):
+        bpy.context.collection.children.link(bpy.data.collections.new("PyBoids"))
+        
+        ClassyCritters = []
         g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
         g.air_speed = bpy.data.scenes["Scene"].bas / 10.0
         g.air_speed_variation = bpy.data.scenes["Scene"].asv
         g.count = bpy.data.scenes["Scene"].boid_count
-        fillCollectionWithCritters("Cube", "Boids", g.count)
+        fillCollectionWithCritters("Cube", "PyBoids", g.count)
         #this is reasonably fast for 0 < count < 1000, 
         #it can take several seconds to initialize at count > 1000 . Probably can be optimized
         g.started = True
+        return {'FINISHED'}
+
+class ResetBoids(bpy.types.Operator):
+    """Clear the existing boid simulation"""
+    bl_idname = "pyboids.clear"
+    bl_label = "Clear boids"
+    
+    def execute(self, context):
+        ClassyCritters = []
+        for obj in bpy.data.objects:
+            obj.select_set(False)
+        for obj in bpy.data.collections['PyBoids'].keys():
+            obj.select_set(True)
+            bpy.ops.object.delete()
+        bpy.data.collections.remove(bpy.data.collections['PyBoids'])
+        g.started = False
+        g.baked = False
         return {'FINISHED'}
     
     
@@ -289,17 +308,21 @@ bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
 def register():
     bpy.utils.register_class(BoidsPanel)
     bpy.utils.register_class(CreateBoids)
+    bpy.utils.register_class(ResetBoids)
     bpy.types.Scene.boid_count = IntProperty(name = "Boid count", default = 100)
     bpy.types.Scene.bas = IntProperty(name = "Air speed", default = 8) #/10
     bpy.types.Scene.asv = FloatProperty(name = "Air speed variation", default = .5)
     bpy.types.Scene.psm = IntProperty(name = "Personal space multiplier", default = 9) #/100
+    bpy.types.Scene.pscale = BoolProperty(name = "Proportional size",
+    description = "Boids scale relative to air speed", default = False)
 
 
 def unregister():
     bpy.utils.unregister_class(BoidsPanel)
     bpy.utils.unregister_class(CreateBoids)
+    bpy.utils.unregister_class(ResetBoids)
     for i in [bpy.types.Scene.boid_count, bpy.types.Scene.bas,
-    bpy.types.Scene.asv, bpy.types.Scene.psm]:
+    bpy.types.Scene.asv, bpy.types.Scene.psm, bpy.types.Scene.pscale]:
         del i
 
 
