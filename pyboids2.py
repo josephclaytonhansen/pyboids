@@ -3,6 +3,25 @@ from datetime import datetime
 from mathutils import Vector
 C = bpy.context
 
+from bpy.props import (StringProperty,
+                       BoolProperty,
+                       IntProperty,
+                       FloatProperty,
+                       FloatVectorProperty,
+                       EnumProperty,
+                       PointerProperty,
+                       )
+
+bl_info = {
+    'name': 'PyBoids',
+    'category': 'Animation',
+    'author': 'Joseph Hansen',
+    'version': (0, 0, 3),
+    'blender': (3, 3, 0),
+    'location': '',
+    'description': ''
+}
+
 #----------------Generic helper functions-----------------
 
 def vectorDistance(a: Vector, b: Vector) -> float: 
@@ -36,6 +55,7 @@ def randomSeed():
 class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
+        self.started = False
         self.debug = False
         self.seed = seed
         self.count = count #expose this!
@@ -127,10 +147,6 @@ def finalizeInitialSpacing():
 g = GlobalParameters(randomSeed(), 100) #the same seed will return the same results! 
 #use a random number for the first parameter if you want random results
 
-fillCollectionWithCritters("Cube", "Boids", g.count)
-#this is reasonably fast for 0 < count < 1000, 
-#it can take several seconds to initialize at count > 1000 . Probably can be optimized
-
 #-------------------------------------Simulation---------------------------------------
 
 def syncWeights(critter, s, c, a, sw, cw, aw, mw):        
@@ -144,7 +160,7 @@ def syncWeights(critter, s, c, a, sw, cw, aw, mw):
 
 def bakeFrameAndAdvance(scene):
     #starting on g.sim_start, 
-    if not g.baked:
+    if not g.baked and g.started:
         for critter in ClassyCritters:
             vs = separation(critter)
             vc = cohesion(critter, 3)
@@ -209,7 +225,63 @@ def alignment(critter, group):
 #-----------------------Advanced Rules------------------------
 
     
+#----------------------------Panel----------------------------    
+
+class BoidsPanel(bpy.types.Panel):
+    bl_label = "PyBoids"
+    bl_idname = "OBJECT_PT_pyboids_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_context = "objectmode"
+    bl_category = "Animation"
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        row = layout.row()
+        if not g.started:
+            row.operator("pyboids.init")
+            row = layout.row()
+            row.prop(scene, "boid_count")
+
+#----------------------------Operators------------------------
+
+class CreateBoids(bpy.types.Operator):
+    """Initialize a boid simulation"""
+    bl_idname = "pyboids.init"
+    bl_label = "Start boid simulation"
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        g.count = bpy.data.scenes["Scene"].boid_count
+        fillCollectionWithCritters("Cube", "Boids", g.count)
+        #this is reasonably fast for 0 < count < 1000, 
+        #it can take several seconds to initialize at count > 1000 . Probably can be optimized
+        g.started = True
+        return {'FINISHED'}
     
     
 #--------------------Viewport Preview-------------------------
+
 bpy.app.handlers.frame_change_post.append(bakeFrameAndAdvance)
+
+#---------------------------Register--------------------------
+
+def register():
+    bpy.utils.register_class(BoidsPanel)
+    bpy.utils.register_class(CreateBoids)
+    bpy.types.Scene.boid_count = IntProperty(name = "Boid Count", default = 100)
+
+
+def unregister():
+    bpy.utils.unregister_class(BoidsPanel)
+    bpy.utils.unregister_class(CreateBoids)
+    for i in [bpy.types.Scene.boid_count]:
+        del i
+
+
+if __name__ == "__main__":
+    register()
