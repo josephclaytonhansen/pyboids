@@ -26,12 +26,6 @@ bl_info = {
 
 def vectorDistance(a: Vector, b: Vector) -> float: 
     return (b - a).length
-      
-def selectAndActive(n):
-    #utility function- there may be a one-liner that can replace this
-    obj = bpy.data.objects[n]
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
 
 
 def randomSeed():
@@ -88,7 +82,7 @@ ClassyCritters = []
 def fillCollectionWithCritters(critter, col, count):
     random.seed(g.seed) 
     
-    selectAndActive(critter)
+    #selectAndActive(critter)
     o = bpy.context.selected_objects[0]
     ClassyCritters.append(Critter(o.name, o))
     #moveToCollection(col, critter)
@@ -96,11 +90,13 @@ def fillCollectionWithCritters(critter, col, count):
     for x in range(0, count):
         bpy.ops.object.duplicate(linked=True)
         o = bpy.context.selected_objects[0]
+        
         try:
             bpy.data.collections["PyBoids"].objects.link(o)
-            bpy.data.collections["Collections"].objects.unlink(o)
-        except Exception as e:
-            print(e)
+            bpy.data.collections["Collection"].objects.unlink(o)
+        except:
+            pass
+
         r = Critter(o.name, o)
         k = random.random()
         r.air_speed = g.air_speed
