@@ -69,6 +69,9 @@ class Critter: #wrapper for Blender object with some additional information
         self.recharge_time = 40
         self.rt_store = 40
         self.is_flying = True
+        
+        self.zero_frame_loc = Vector([0.0,0.0,0.0])
+        self.zero_frame_vel = Vector([0.0,0.0,0.0])
     
     def __str__(self):
         return self.name+"  Neighbors: " + str((self.lneighbors))
@@ -158,6 +161,9 @@ def initialSpacing(count):
             critter.obj.location[2] = ((p*2)*r3) - p
             critter.velocity = Vector([r3, r2, r1]).normalized()
             
+            critter.zero_frame_loc = critter.obj.location.copy()
+            critter.zero_frame_velocity = critter.velocity.copy()
+            
             if g.debug:
                 print(critter.velocity)
         return True
@@ -187,10 +193,27 @@ def syncWeights(critter, s, c, a, sw, cw, aw, mw):
 def bakeFrameAndAdvance(scene):
     g.underwater = bpy.data.scenes["Scene"].underwater
     g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
+    
     #starting on g.sim_start, 
     if not g.baked and g.started:
         for critter in ClassyCritters:
-            if not g.underwater:
+            
+            if g.underwater:
+                critter.energy = 999
+                
+            if bpy.data.scenes["Scene"].frame_current <= 1: #zero frame checks
+                critter.obj.location = critter.zero_frame_loc
+                critter.velocity = critter.zero_frame_velocity
+                critter.recharge_time = critter.rt_store
+                critter.energy = critter.energy_store
+                
+                if not bpy.data.scenes["Scene"].startlanded:
+                    critter.is_flying = True
+                else:
+                    critter.is_flying = False
+                    critter.recharge_time = critter.rt_store
+
+            else: #every other frame
                 if critter.is_flying: #flying
                     critter.energy -= 1
                     if critter.energy <= 0: #out of energy, time to land
@@ -204,12 +227,7 @@ def bakeFrameAndAdvance(scene):
                     if critter.recharge_time <= 0: #done recharging, time to fly
                         critter.recharge_time = 0
                         critter.is_flying = True
-                        critter.energy = critter.energy_store
-            
-            else:
-                critter.is_flying = True
-                    
-                
+                        critter.energy = critter.energy_store    
             
             vs = separation(critter)
             vc = cohesion(critter, 3)
@@ -301,6 +319,8 @@ class BoidsPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.prop(scene, "pscale")
             row.prop(scene, "pscalesf")
+            row = layout.row(align=True)
+            row.prop(scene, "startlanded")
         else:
             row.operator("pyboids.clear")
         layout.separator()
@@ -485,6 +505,8 @@ def register():
     b.predatoracc = BoolProperty(name="Air speed burst",
     description = "If True, boids will have a burst of increased speed while a predator is within perception distance.\nThis will rapidly deplete their air time, and they will land sooner")
     b.bseed = IntProperty(name="Seed", default=g.seed)
+    b.startlanded  = BoolProperty(name="Start boids landed",
+    description="All boids will start landed, and take flight after their recharge time.\nLanded boids will sit still, crawl, or hop, based on the Landing settings")
     
 
 def unregister():
@@ -500,7 +522,8 @@ def unregister():
     b.min_airtime, b.max_airtime, b.sticky,
     b.crawl, b.hopandfeed, b.hopsurface,
     b.goal, b.goalb, b.predators, b.predatorsb,
-    b.predatorscatter, b.preatoracc, b.bseed]:
+    b.predatorscatter, b.preatoracc, b.bseed,
+    b.startlanded]:
         del i
 
 
