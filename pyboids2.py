@@ -39,7 +39,7 @@ class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
         self.started = False
-        self.debug = True
+        self.debug = False
         self.seed = seed
         self.count = count #expose this!
         self.sim_start = 0
@@ -63,10 +63,11 @@ class Critter: #wrapper for Blender object with some additional information
         self.lneighbors = 0
         self.initialized = False
         
-        self.air_time = 0
+        self.energy_store = 200
         self.energy = 200
         self.landing_time = 0
         self.recharge_time = 40
+        self.rt_store = 40
         self.is_flying = True
     
     def __str__(self):
@@ -110,10 +111,21 @@ def fillCollectionWithCritters(critter, col, count):
         max_energy = bpy.data.scenes["Scene"].max_airtime - bpy.data.scenes["Scene"].min_airtime
         if max_energy < 0:
             max_energy = 0
-        r.energy = int(bpy.data.scenes["Scene"].min_airtime + (k * max_energy))
+        
+        p = int(bpy.data.scenes["Scene"].min_airtime + (k * max_energy))
+        r.energy = p
+        r.energy_store = p
+        
+        max_recharge_time = bpy.data.scenes["Scene"].max_rechargetime - bpy.data.scenes["Scene"].min_rechargetime
+        if max_recharge_time < 0:
+            max_recharge_time = 0
+        
+        i = int(bpy.data.scenes["Scene"].min_rechargetime + (k * max_recharge_time))
+        r.recharge_time = i
+        r.rt_store = i
         
         if g.debug:
-            print(r.energy)
+            print(r.energy, r.recharge_time)
         
         r.air_speed = g.air_speed
         if k >= .5:
@@ -179,11 +191,21 @@ def bakeFrameAndAdvance(scene):
     if not g.baked and g.started:
         for critter in ClassyCritters:
             
-            if critter.is_flying:
+            if critter.is_flying: #flying
                 critter.energy -= 1
-                if critter.energy <= 0:
+                if critter.energy <= 0: #out of energy, time to land
                     critter.energy = 0
                     critter.is_flying = False
+                    critter.recharge_time = critter.rt_store
+                    
+            else: #landed
+                landingBehavior(critter)
+                critter.recharge_time -= 1
+                if critter.recharge_time <= 0: #done recharging, time to fly
+                    critter.recharge_time = 0
+                    critter.is_flying = True
+                    critter.energy = critter.energy_store
+                    
                 
             
             vs = separation(critter)
@@ -201,7 +223,8 @@ def bakeFrameAndAdvance(scene):
               -g.personal_space_multiplier, 0.1, 0.1, 0.5)).normalized()
 
             #for now...
-            critter.obj.location += critter.velocity * critter.air_speed         
+            if critter.is_flying:
+                critter.obj.location += critter.velocity * critter.air_speed         
             
         #calculate...
         #bake frame...
@@ -248,6 +271,9 @@ def alignment(critter, group):
 
 #-----------------------Advanced Rules------------------------
 
+def landingBehavior(critter):
+    pass
+        
     
 #----------------------------Panel----------------------------    
 
