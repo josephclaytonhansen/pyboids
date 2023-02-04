@@ -190,21 +190,24 @@ def bakeFrameAndAdvance(scene):
     #starting on g.sim_start, 
     if not g.baked and g.started:
         for critter in ClassyCritters:
+            if not g.underwater:
+                if critter.is_flying: #flying
+                    critter.energy -= 1
+                    if critter.energy <= 0: #out of energy, time to land
+                        critter.energy = 0
+                        critter.is_flying = False
+                        critter.recharge_time = critter.rt_store
+                        
+                else: #landed
+                    landingBehavior(critter)
+                    critter.recharge_time -= 1
+                    if critter.recharge_time <= 0: #done recharging, time to fly
+                        critter.recharge_time = 0
+                        critter.is_flying = True
+                        critter.energy = critter.energy_store
             
-            if critter.is_flying: #flying
-                critter.energy -= 1
-                if critter.energy <= 0: #out of energy, time to land
-                    critter.energy = 0
-                    critter.is_flying = False
-                    critter.recharge_time = critter.rt_store
-                    
-            else: #landed
-                landingBehavior(critter)
-                critter.recharge_time -= 1
-                if critter.recharge_time <= 0: #done recharging, time to fly
-                    critter.recharge_time = 0
-                    critter.is_flying = True
-                    critter.energy = critter.energy_store
+            else:
+                critter.is_flying = True
                     
                 
             
