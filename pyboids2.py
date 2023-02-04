@@ -1,4 +1,4 @@
-import bpy, random
+import bpy, random, math
 from datetime import datetime
 from mathutils import Vector
 C = bpy.context
@@ -193,25 +193,24 @@ def syncWeights(critter, s, c, a, sw, cw, aw, mw):
 def bakeFrameAndAdvance(scene):
     g.underwater = bpy.data.scenes["Scene"].underwater
     g.personal_space_multiplier = bpy.data.scenes["Scene"].psm / 100.0
+    if bpy.data.scenes["Scene"].goalb:
+        goal_pos = bpy.data.scenes["Scene"].goal.location
     
     #starting on g.sim_start, 
     if not g.baked and g.started:
         for critter in ClassyCritters:
+            use_synced_weights = True
+            k = random.random()
             
             if g.underwater:
                 critter.energy = 999
+                critter.recharge_time = 0
                 
             if bpy.data.scenes["Scene"].frame_current <= 1: #zero frame checks
                 critter.obj.location = critter.zero_frame_loc
                 critter.velocity = critter.zero_frame_velocity
                 critter.recharge_time = critter.rt_store
                 critter.energy = critter.energy_store
-                
-                if not bpy.data.scenes["Scene"].startlanded:
-                    critter.is_flying = True
-                else:
-                    critter.is_flying = False
-                    critter.recharge_time = critter.rt_store
 
             else: #every other frame
                 if critter.is_flying: #flying
@@ -229,23 +228,30 @@ def bakeFrameAndAdvance(scene):
                         critter.is_flying = True
                         critter.energy = critter.energy_store    
             
-            vs = separation(critter)
-            vc = cohesion(critter, 3)
-            va = alignment(critter, 2)
+            if bpy.data.scenes["Scene"].goalb: #goal enabled
+                if k <= bpy.data.scenes["Scene"].goalweight / 10: #move towards goal?
+                    critter.velocity = (critter.air_speed * (goal_pos - critter.obj.location)).normalized()
+                    use_synced_weights = False
+                    
             
-            if g.debug:
-                print("Critter: ", critter, "Energy: ",critter.energy,
-                 "Frame: ", bpy.data.scenes["Scene"].frame_current,
-                "Separation: ", vs, "Cohesion: ",
-                vc, "Alignment: ", va)
+            if use_synced_weights: #normal behavior, three basic rules
+                vs = separation(critter)
+                vc = cohesion(critter, 3)
+                va = alignment(critter, 2)
                 
-            critter.velocity = (syncWeights(critter,
-             vs, vc, va,
-              -g.personal_space_multiplier, 0.1, 0.1, 0.5)).normalized()
+                if g.debug:
+                    print("Critter: ", critter, "Energy: ",critter.energy,
+                     "Air Speed: ", critter.air_speed,
+                    "Separation: ", vs, "Cohesion: ",
+                    vc, "Alignment: ", va)
+                    
+                critter.velocity = (syncWeights(critter,
+                 vs, vc, va,
+                  -g.personal_space_multiplier, 0.1, 0.1, 0.5)).normalized()
 
             #for now...
             if critter.is_flying:
-                critter.obj.location += critter.velocity * critter.air_speed         
+                critter.obj.location += critter.velocity * critter.air_speed    
             
         #calculate...
         #bake frame...
@@ -319,8 +325,6 @@ class BoidsPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.prop(scene, "pscale")
             row.prop(scene, "pscalesf")
-            row = layout.row(align=True)
-            row.prop(scene, "startlanded")
         else:
             row.operator("pyboids.clear")
         layout.separator()
@@ -379,6 +383,8 @@ class BoidsRulesPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(scene, "goalb") 
         row.prop(scene, "goal")
+        row = layout.row(align=True)
+        row.prop(scene, "goalweight")
         layout.separator()
         
         row = layout.row(align=True)
@@ -487,8 +493,8 @@ def register():
     description = "If set to True, landed boids will crawl along the surfaces of set objects while landed, like insects.\nIf set to False, boids will be stationary while landed, like birds in a tree.")
     b.hopandfeed=BoolProperty(name="Hop",
     description = "If True, landed boids will hop on the selected surface like birds feeding.\nWithout a set surface, this will do nothing.")
-    b.hopsurface = PointerProperty(name="Surface", type = bpy.types.Object,
-    description="Set the surface for boids to hop around on")
+    b.hopsurface = PointerProperty(name="Surfaces", type = bpy.types.Collection,
+    description="Set the surfaces for boids to move on")
     b.sticky = BoolProperty(name="Sticky crawling", 
     description = "If True, boids will crawl and ignore gravity, like insects.\nIf false, boids will only land on and crawl on faces facing upwards, like birds")
     b.goal = PointerProperty(name="",
@@ -505,8 +511,9 @@ def register():
     b.predatoracc = BoolProperty(name="Air speed burst",
     description = "If True, boids will have a burst of increased speed while a predator is within perception distance.\nThis will rapidly deplete their air time, and they will land sooner")
     b.bseed = IntProperty(name="Seed", default=g.seed)
-    b.startlanded  = BoolProperty(name="Start boids landed",
-    description="All boids will start landed, and take flight after their recharge time.\nLanded boids will sit still, crawl, or hop, based on the Landing settings")
+    b.goalweight = FloatProperty(min=0.1, max = 2.0, default = 0.75, 
+    name = "Goal importance",
+    description = "Chance a boid has of moving towards the goal at any moment")
     
 
 def unregister():
@@ -523,7 +530,7 @@ def unregister():
     b.crawl, b.hopandfeed, b.hopsurface,
     b.goal, b.goalb, b.predators, b.predatorsb,
     b.predatorscatter, b.preatoracc, b.bseed,
-    b.startlanded]:
+    b.goalweight]:
         del i
 
 
