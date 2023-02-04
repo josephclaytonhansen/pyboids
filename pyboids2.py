@@ -39,7 +39,7 @@ class GlobalParameters: #seed, count
     #eventually this would have a UI
     def __init__(self, seed, count):
         self.started = False
-        self.debug = False
+        self.debug = True
         self.seed = seed
         self.count = count #expose this!
         self.sim_start = 0
@@ -105,7 +105,16 @@ def fillCollectionWithCritters(critter, col, count):
             pass
 
         r = Critter(o.name, o)
-        k = random.random()
+        k = random.random() #no need to re-run this each time
+        
+        max_energy = bpy.data.scenes["Scene"].max_airtime - bpy.data.scenes["Scene"].min_airtime
+        if max_energy < 0:
+            max_energy = 0
+        r.energy = int(bpy.data.scenes["Scene"].min_airtime + (k * max_energy))
+        
+        if g.debug:
+            print(r.energy)
+        
         r.air_speed = g.air_speed
         if k >= .5:
             r.air_speed -= ((k / (1/g.air_speed_variation)))
@@ -169,12 +178,20 @@ def bakeFrameAndAdvance(scene):
     #starting on g.sim_start, 
     if not g.baked and g.started:
         for critter in ClassyCritters:
+            
+            if critter.is_flying:
+                critter.energy -= 1
+                if critter.energy <= 0:
+                    critter.energy = 0
+                    critter.is_flying = False
+                
+            
             vs = separation(critter)
             vc = cohesion(critter, 3)
             va = alignment(critter, 2)
             
             if g.debug:
-                print("Critter: ", critter,
+                print("Critter: ", critter, "Energy: ",critter.energy,
                  "Frame: ", bpy.data.scenes["Scene"].frame_current,
                 "Separation: ", vs, "Cohesion: ",
                 vc, "Alignment: ", va)
