@@ -19,7 +19,9 @@ bl_info = {
     'version': (0, 1, 1),
     'blender': (3, 3, 0),
     'location': '',
-    'description': ''
+    'description': '',
+    'doc_url':'jhansen.art/pyboids',
+    'tracker_url':'https://github.com/josephclaytonhansen/pyboids',
 }
 
 #----------------Generic helper functions-----------------
@@ -338,7 +340,7 @@ def landingBehavior(critter):
     pass
         
     
-#----------------------------Panel----------------------------    
+#---------------------------Panels----------------------------    
 
 class BoidsPanel(bpy.types.Panel):
     bl_label = "PyBoids"
