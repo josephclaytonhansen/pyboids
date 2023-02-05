@@ -144,7 +144,7 @@ def fillCollectionWithCritters(critter, col, count):
         
         if bpy.data.scenes["Scene"].pscale == True:
             for d in [0,1,2]:
-                o.scale[d] = o.scale[d] + k
+                o.scale[d] = o.scale[d] + j
         
     if initialSpacing(count):
         finalizeInitialSpacing()
@@ -317,6 +317,7 @@ class BoidsPanel(bpy.types.Panel):
         scene = context.scene
         layout.label(text="Static (initial) settings")
         row = layout.row()
+        row.scale_y = 2
         if not g.started:
             row.operator("pyboids.init")
             row = layout.row()
@@ -324,7 +325,9 @@ class BoidsPanel(bpy.types.Panel):
             row.prop(scene, "bseed")
             row = layout.row(align=True)
             row.prop(scene, "pscale")
-            row.prop(scene, "pscalesf")
+            sub = row.row()
+            sub.scale_x = 1.6
+            sub.prop(scene, "pscalesf")
         else:
             row.operator("pyboids.clear")
         layout.separator()
@@ -355,6 +358,7 @@ class BoidsLandingPanel(bpy.types.Panel):
             row = layout.row(align=True)
             row.prop(scene, "min_rechargetime")
             row.prop(scene, "max_rechargetime")
+            layout.label(text="Air time:")
             row = layout.row(align=True)
             row.prop(scene, "min_airtime")
             row.prop(scene, "max_airtime")
@@ -363,9 +367,10 @@ class BoidsLandingPanel(bpy.types.Panel):
             row.prop(scene, "crawl")
             row.prop(scene, "sticky")
             row = layout.row(align=True)
+            row.scale_x = .9
             row.prop(scene, "hopandfeed")
             sub = row.row()
-            sub.scale_x = 1.5
+            sub.scale_x = 1.6
             sub.prop(scene, "hopsurface")
         
 class BoidsRulesPanel(bpy.types.Panel):
@@ -381,8 +386,10 @@ class BoidsRulesPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene 
         row = layout.row(align=True)
-        row.prop(scene, "goalb") 
-        row.prop(scene, "goal")
+        row.prop(scene, "goalb")
+        sub = row.row()
+        sub.scale_x = 1.6 
+        sub.prop(scene, "goal")
         row = layout.row(align=True)
         row.prop(scene, "goalweight")
         layout.separator()
@@ -471,8 +478,8 @@ def register():
     b.boid_count = IntProperty(name = "Count", default = 100)
     b.bas = IntProperty(name = "Air speed", default = 8) #/10
     b.asv = FloatProperty(name = "Variation", description = "Air speed variation", default = .5)
-    b.psm = IntProperty(name = "Personal space multiplier", default = 9) #/100
-    b.pscale = BoolProperty(name = "Size",
+    b.psm = IntProperty(name = "Personal space", default = 9) #/100
+    b.pscale = BoolProperty(name = "Mass",
     description = "Boids scale relative to air speed", default = False)
     b.pscalesf = IntProperty(name="Variation", default = 2) # *1/n * 100
     b.underwater = BoolProperty(name = "Underwater (Disable Landing)",
@@ -483,28 +490,28 @@ def register():
     b.max_rechargetime = IntProperty(name="Max",
     default=40,
     description="When a boid has been in the air long enough to run out of energy,\n it must land and recharge. This is the maximum amount of time (in frames) for recharge")
-    b.min_airtime = IntProperty(name="Min air time",
+    b.min_airtime = IntProperty(name="Min",
     default = 200,
     description="How long (at least) a boid stays in the air before needing to land, in frames.")
-    b.max_airtime = IntProperty(name="Max air time",
+    b.max_airtime = IntProperty(name="Max",
     default = 300,
     description="How long (at most) a boid stays in the air before needing to land, in frames.\nSet to 0 to disable flying")
     b.crawl = BoolProperty(name = "Crawl",
     description = "If set to True, landed boids will crawl along the surfaces of set objects while landed, like insects.\nIf set to False, boids will be stationary while landed, like birds in a tree.")
     b.hopandfeed=BoolProperty(name="Hop",
-    description = "If True, landed boids will hop on the selected surface like birds feeding.\nWithout a set surface, this will do nothing.")
+    description = "If True, landed boids will hop on the selected surface like birds feeding.\nCan combine with crawling.")
     b.hopsurface = PointerProperty(name="Surfaces", type = bpy.types.Collection,
     description="Set the surfaces for boids to move on")
-    b.sticky = BoolProperty(name="Sticky crawling", 
+    b.sticky = BoolProperty(name="Sticky crawl", 
     description = "If True, boids will crawl and ignore gravity, like insects.\nIf false, boids will only land on and crawl on faces facing upwards, like birds")
     b.goal = PointerProperty(name="",
     type = bpy.types.Object,
     description = "Goal object to move towards in flight")
-    b.goalb = BoolProperty(name = "Enable goal", description="Goal object to move towards in flight.")
+    b.goalb = BoolProperty(name = "Goal?", description="Goal object to move towards in flight.")
     b.predators = PointerProperty(name="",
     type = bpy.types.Collection,
     description = "Predators to move away from in flight, and potentially split the flock.\nEffective distance is determined by perception distance")
-    b.predatorsb = BoolProperty(name = "Enable predators",
+    b.predatorsb = BoolProperty(name = "Predators?",
     description = "Predators to move away from in flight, and potentially split the flock.\nEffective distance is determined by perception distance")
     b.predatorscatter=BoolProperty(name="Scatter landed",
     description = "If True, predators will force landed boids to take flight immediately if they are near enough")
