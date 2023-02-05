@@ -1,4 +1,4 @@
-import bpy, random, math
+import bpy, random, math, bmesh
 from datetime import datetime
 from mathutils import Vector
 C = bpy.context
@@ -16,7 +16,7 @@ bl_info = {
     'name': 'PyBoids',
     'category': 'Animation',
     'author': 'Joseph Hansen',
-    'version': (0, 0, 3),
+    'version': (0, 1, 1),
     'blender': (3, 3, 0),
     'location': '',
     'description': ''
@@ -31,6 +31,42 @@ def vectorDistance(a: Vector, b: Vector) -> float:
 def randomSeed():
     seed = int(datetime.now().day * datetime.now().second * random.random())
     return seed
+
+#----------------Landing Helper Functions-----------------
+def getUpwardsFaces(obj, lenience):
+    obj = bpy.data.objects[obj]
+    bpy.ops.object.mode_set(mode='EDIT')
+    mesh = bmesh.from_edit_mesh(bpy.context.object.data)
+    ge = False
+    faces = []
+
+    for g in bpy.context.active_object.vertex_groups:
+        if g.name == "PB_LandingSurface":
+            ge = True
+            break
+    if not ge:
+        vg = bpy.context.active_object.vertex_groups.new(name="PB_LandingSurface")
+    else:
+        vg = bpy.context.active_object.vertex_groups["PB_LandingSurface"]
+    vi = []
+
+    up = Vector([0,0,1])
+
+    for f in mesh.faces:
+        if f.normal.dot(up) > lenience:
+            faces.append(f)
+            v = [vert.index for vert in f.verts]
+            vi.append(v)
+
+    bmesh.update_edit_mesh(bpy.context.object.data)        
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for l in vi:
+        vg.add(l, 1.0, 'ADD')
+    
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    
+    return faces
 
 
 #-------------------Boid classes--------------------------
