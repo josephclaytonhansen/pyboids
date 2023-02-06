@@ -35,7 +35,7 @@ def randomSeed():
     return seed
 
 #----------------Landing Helper Functions-----------------
-def getUpwardsFaces(obj, lenience):
+def getUpwardsFaces(obj):
     obj = bpy.data.objects[obj]
     bpy.ops.object.mode_set(mode='EDIT')
     mesh = bmesh.from_edit_mesh(bpy.context.object.data)
@@ -55,7 +55,7 @@ def getUpwardsFaces(obj, lenience):
     up = Vector([0,0,1])
 
     for f in mesh.faces:
-        if f.normal.dot(up) > lenience:
+        if f.normal.dot(up) == 1.0 and f.normal.z == 1:
             faces.append(f)
             v = [vert.index for vert in f.verts]
             vi.append(v)
